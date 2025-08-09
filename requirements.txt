@@ -7,4 +7,8 @@ pyyaml
 numpy
 scenedetect
 opencv-python
+librosa
+pydub
+tensorflow-cpu
+
 

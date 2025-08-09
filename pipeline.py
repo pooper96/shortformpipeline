@@ -1,6 +1,9 @@
 import os
-import subprocess
-from transcriber import transcribe_audio
+import re
+import argparse
+import gc
+
+from transcriber import transcribe_audio         # ← if your file is still named transcribe.py, rename import
 from highlight_picker import pick_highlights
 from clipper import cut_clips
 from captions_and_style import style_clips
@@ -11,142 +14,86 @@ OUTPUT_FOLDER = "output"
 CONFIG_PATH = "config.yaml"
 
 
-def run_pipeline(video_path):
+def _safe_move(src_path: str, out_dir: str, base_prefix: str) -> str:
+    """
+    Moves a file to out_dir with a name that never collides.
+    Output pattern: <base_prefix>__<original_name>.ext  (with _1, _2… if needed)
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    name = os.path.basename(src_path)
+    base, ext = os.path.splitext(name)
+
+    # start with <videoName>__<clipname>.ext
+    target_base = f"{base_prefix}__{base}"
+    dst = os.path.join(out_dir, f"{target_base}{ext}")
+
+    if not os.path.exists(dst):
+        os.rename(src_path, dst)
+        return dst
+
+    # n+1 increment
+    n = 1
+    while True:
+        cand = os.path.join(out_dir, f"{target_base}_{n}{ext}")
+        if not os.path.exists(cand):
+            os.rename(src_path, cand)
+            return cand
+        n += 1
+
+
+def run_pipeline(video_path: str):
     basename = os.path.splitext(os.path.basename(video_path))[0]
     work_dir = os.path.join("work", basename)
     os.makedirs(work_dir, exist_ok=True)
 
+    # 1) Transcribe
     transcript = transcribe_audio(video_path, work_dir, CONFIG_PATH)
+
+    # 2) Pick highlights (GPT/local depending on your config)
     highlights = pick_highlights(transcript, work_dir, CONFIG_PATH)
+
+    # Free heavy objects as we go to keep RAM/heap low
+    del transcript
+    gc.collect()
+
+    # 3) Cut + 4) Style
     cut_clips(video_path, highlights, work_dir, CONFIG_PATH)
     style_clips(work_dir, CONFIG_PATH)
+
+    # 5) Titles
     generate_titles(work_dir, CONFIG_PATH)
 
-    # Move final clips to output
-    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    final_clips = os.path.join(work_dir, "clips")
-    for file in os.listdir(final_clips):
-        if file.endswith(".mp4"):
-            src = os.path.join(final_clips, file)
-            dst = os.path.join(OUTPUT_FOLDER, file)
-            os.rename(src, dst)
+    # 6) Move _final clips to output using collision-safe names
+    final_clips_dir = os.path.join(work_dir, "clips")
+    if os.path.isdir(final_clips_dir):
+        for file in os.listdir(final_clips_dir):
+            if file.endswith("_final.mp4"):
+                src = os.path.join(final_clips_dir, file)
+                _safe_move(src, OUTPUT_FOLDER, basename)
+
+    # Optional: clean up /work for this job to keep disk/RAM low
+    # (comment out if you want to keep intermediates)
+    # import shutil
+    # shutil.rmtree(work_dir, ignore_errors=True)
+
     print("\n✅ Done! Check the output folder.")
 
 
 if __name__ == "__main__":
-    # Find first file in input/
-    for file in os.listdir(INPUT_FOLDER):
-        if file.endswith(".mp4"):
-            path = os.path.join(INPUT_FOLDER, file)
-            run_pipeline(path)
-            break
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", help="Path to a single video to process")
+    args = parser.parse_args()
+
+    if args.input and os.path.exists(args.input):
+        run_pipeline(args.input)
     else:
-        print("No .mp4 file found in input/")
-
-# === transcribe.py ===
-from faster_whisper import WhisperModel
-import os
-import json
-import yaml
-
-
-def transcribe_audio(video_path, work_dir, config_path):
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-
-    use_gpu = config.get("use_gpu", True)
-    model = WhisperModel("medium", device="cuda" if use_gpu else "cpu", compute_type="float16")
-
-    print("\n🔍 Transcribing...")
-    segments, info = model.transcribe(video_path, beam_size=5)
-
-    transcript = []
-    srt_lines = []
-    for i, seg in enumerate(segments):
-        transcript.append({"start": seg.start, "end": seg.end, "text": seg.text})
-        srt_lines.append(f"{i + 1}\n{format_time(seg.start)} --> {format_time(seg.end)}\n{seg.text.strip()}\n")
-
-    with open(os.path.join(work_dir, "transcript.json"), "w") as f:
-        json.dump(transcript, f, indent=2)
-    with open(os.path.join(work_dir, "transcript.srt"), "w") as f:
-        f.write("\n".join(srt_lines))
-
-    return transcript
-
-
-def format_time(seconds):
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    ms = int((seconds - int(seconds)) * 1000)
-    return f"{h:02}:{m:02}:{s:02},{ms:03}"
-
-
-# === highlight_picker.py ===
-# Placeholder: loads transcript and selects dummy 2 highlight clips for now
-import json
-
-
-def pick_highlights(transcript, work_dir, config_path):
-    print("\n✨ Picking highlights...")
-    highlights = []
-    for i, seg in enumerate(transcript[:2]):
-        highlights.append({"start": seg['start'], "end": seg['end']})
-    with open(os.path.join(work_dir, "highlights.json"), "w") as f:
-        json.dump(highlights, f, indent=2)
-    return highlights
-
-
-# === clipper.py ===
-import os
-import subprocess
-import json
-
-
-def cut_clips(video_path, highlights, work_dir, config_path):
-    print("\n✂️ Cutting clips...")
-    clips_dir = os.path.join(work_dir, "clips")
-    os.makedirs(clips_dir, exist_ok=True)
-
-    for i, hl in enumerate(highlights):
-        outpath = os.path.join(clips_dir, f"clip_{i + 1:03}.mp4")
-        cmd = [
-            "ffmpeg",
-            "-ss", str(hl['start']),
-            "-to", str(hl['end']),
-            "-i", video_path,
-            "-c:v", "libx264", "-crf", "23",
-            "-c:a", "aac", "-strict", "experimental",
-            outpath
-        ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-
-# === captions_and_style.py ===
-# Placeholder: renames clips with _final to simulate captioned output
-import os
-
-
-def style_clips(work_dir, config_path):
-    print("\n💬 Styling clips...")
-    clips_dir = os.path.join(work_dir, "clips")
-    for file in os.listdir(clips_dir):
-        if file.endswith(".mp4") and not file.endswith("_final.mp4"):
-            src = os.path.join(clips_dir, file)
-            dst = os.path.join(clips_dir, file.replace(".mp4", "_final.mp4"))
-            os.rename(src, dst)
-
-
-# === titles_tags.py ===
-# Placeholder: creates text titles for each final clip
-import os
-
-
-def generate_titles(work_dir, config_path):
-    print("\n📝 Generating titles...")
-    clips_dir = os.path.join(work_dir, "clips")
-    for file in os.listdir(clips_dir):
-        if file.endswith("_final.mp4"):
-            name = file.replace("_final.mp4", "")
-            with open(os.path.join(clips_dir, f"{name}_title.txt"), "w") as f:
-                f.write(f"🔥 Epic Clip: {name.replace('_', ' ').title()} #viral #shorts")
+        # Fallback: process the first .mp4 in input/
+        if not os.path.isdir(INPUT_FOLDER):
+            os.makedirs(INPUT_FOLDER, exist_ok=True)
+        for file in os.listdir(INPUT_FOLDER):
+            if file.lower().endswith(".mp4"):
+                path = os.path.join(INPUT_FOLDER, file)
+                run_pipeline(path)
+                break
+        else:
+            print("No .mp4 file found in input/")
