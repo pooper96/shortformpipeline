@@ -1,0 +1,10 @@
+faster-whisper
+ffmpeg-python
+openai
+moviepy
+pysrt
+pyyaml
+numpy
+scenedetect
+opencv-python
+

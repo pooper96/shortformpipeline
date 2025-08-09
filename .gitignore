@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+
+# Tools
+.pytest_cache/
+.mypy_cache/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Your folders / media
+input/
+output/
+work/
+clips/
+*.mp4
+*.mov
+*.wav

@@ -1,0 +1,25 @@
+use_gpu: true
+
+clip:
+  min_seconds: 20
+  max_seconds: 45
+  buffer_in: 0.4
+  buffer_out: 0.6
+
+captions:
+  style: outlined
+  font: Arial.ttf
+  size_ratio: 0.06
+  emoji: false
+
+scoring:
+  mode: gpt           # "gpt" or "local"
+  gpt_model: gpt-4o-mini
+  max_clips: 5
+  window_sec: 120      # analyze 2-min windows
+  stride_sec: 30       # 30s overlap to avoid chopping hooks
+
+
+reframe:
+  enable_face_track: false
+  min_face_conf: 0.5
