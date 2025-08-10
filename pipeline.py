@@ -3,11 +3,12 @@ import re
 import argparse
 import gc
 
-from transcriber import transcribe_audio         # ← if your file is still named transcribe.py, rename import
+from transcriber_torch import transcribe_audio  # switch to the torch backend
 from highlight_picker import pick_highlights
 from clipper import cut_clips
 from captions_and_style import style_clips
 from titles_tags import generate_titles
+
 
 INPUT_FOLDER = "input"
 OUTPUT_FOLDER = "output"

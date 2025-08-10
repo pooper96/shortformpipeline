@@ -15,3 +15,5 @@ input/
 .DS_Store
 .vscode/
 .idea/
+# Logs
+*.log
