@@ -1,4 +1,8 @@
-use_gpu: true
+use_gpu: false
+whisper:
+  model_size: small
+  compute_type_cpu: int8
+
 
 scoring:
   mode: hybrid   # local + GPT mixing
@@ -11,6 +15,14 @@ clip:
   buffer_in: 0.25
   buffer_out: 0.35
 
+whisper:
+  model_size: medium         # small / medium / large-v3
+  beam_size: 1               # 1 = fastest
+  vad_filter: true
+  vad_parameters:
+    min_silence_duration_ms: 500
+  compute_type_gpu: float16  # best on 40xx
+  compute_type_cpu: int8     # fast on CPU
 
 captions:
   style: outlined
