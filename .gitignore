@@ -1,28 +1,17 @@
 # Python
-__pycache__/
-*.py[cod]
 .venv/
-venv/
+__pycache__/
+*.pyc
+
+# Local configs / secrets
 .env
-.env.*
 
-# Tools
-.pytest_cache/
-.mypy_cache/
-
-# IDE
-.idea/
-*.iml
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Your folders / media
-input/
-output/
+# Generated media
 work/
-clips/
-*.mp4
-*.mov
-*.wav
+output/
+input/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
