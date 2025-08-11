@@ -21,23 +21,24 @@ whisper:
   compute_type_cpu: int8     # fast on CPU
 
 encode:
-  mode: nvenc           # nvenc | copy
-  width: 1080           # portrait output
+  mode: nvenc
+  width: 1080
   height: 1920
-  fps: 60               # or 30 to match source; 60 looks crisp
-  rc: vbr_hq            # NVENC rate control
-  cq: 19                # ~18–23 is good; lower = higher quality
-  b_v: 8M               # target bitrate
+  fps: 60           # or 30 if your source is 30
+  rc: vbr_hq
+  cq: 19            # 18–22 sweet spot; lower = higher quality
+  b_v: 8M
   maxrate: 12M
   bufsize: 24M
-  preset: p5            # p1=slowest quality .. p7=fastest
+  preset: p5
   profile: high
-  gop: 120              # for 60fps -> 2s keyframes
-  aq: 1                 # spatial AQ
+  gop: 120          # 2s keyframes at 60fps
+  aq: 1
   aq_strength: 8
-  bf: 3                 # B-frames
+  bf: 3
   audio_bitrate: 192k
   audio_rate: 48000
+
 
 captions:
   font: Arial
