@@ -1,8 +1,4 @@
 use_gpu: false
-whisper:
-  model_size: small
-  compute_type_cpu: int8
-
 
 scoring:
   mode: hybrid   # local + GPT mixing
@@ -34,3 +30,10 @@ captions:
 reframe:
   enable_face_track: false
   min_face_conf: 0.5
+
+encode:
+  mode: nvenc
+  crf: 23
+  preset: p5
+  audio_bitrate: 128k
+
