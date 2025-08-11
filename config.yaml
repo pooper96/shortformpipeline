@@ -20,20 +20,35 @@ whisper:
   compute_type_gpu: float16  # best on 40xx
   compute_type_cpu: int8     # fast on CPU
 
+encode:
+  mode: nvenc           # nvenc | copy
+  width: 1080           # portrait output
+  height: 1920
+  fps: 60               # or 30 to match source; 60 looks crisp
+  rc: vbr_hq            # NVENC rate control
+  cq: 19                # ~18–23 is good; lower = higher quality
+  b_v: 8M               # target bitrate
+  maxrate: 12M
+  bufsize: 24M
+  preset: p5            # p1=slowest quality .. p7=fastest
+  profile: high
+  gop: 120              # for 60fps -> 2s keyframes
+  aq: 1                 # spatial AQ
+  aq_strength: 8
+  bf: 3                 # B-frames
+  audio_bitrate: 192k
+  audio_rate: 48000
+
 captions:
-  style: outlined
-  font: Arial.ttf
-  size_ratio: 0.06
-  emoji: false
+  font: Arial
+  font_size: 38
+  outline: 3
+  margin_v: 110
+
 
 
 reframe:
   enable_face_track: false
   min_face_conf: 0.5
 
-encode:
-  mode: nvenc
-  crf: 23
-  preset: p5
-  audio_bitrate: 128k
 
