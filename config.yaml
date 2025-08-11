@@ -1,55 +1,44 @@
-use_gpu: false
+use_gpu: true
 
-scoring:
-  mode: hybrid   # local + GPT mixing
-  max_clips: 5
-  window_sec: 10
-  stride_sec: 5
+whisper:
+  model_size: small      # small = fast; bump to medium later if quality needs it
+
 clip:
   min_seconds: 15
   max_seconds: 45
   buffer_in: 0.25
   buffer_out: 0.35
 
-whisper:
-  model_size: medium         # small / medium / large-v3
-  beam_size: 1               # 1 = fastest
-  vad_filter: true
-  vad_parameters:
-    min_silence_duration_ms: 500
-  compute_type_gpu: float16  # best on 40xx
-  compute_type_cpu: int8     # fast on CPU
+scoring:
+  mode: hybrid           # local hooks + audio peaks, then GPT ordering
+  max_clips: 5
+  window_sec: 10
+  stride_sec: 5
+  gpt_model: gpt-4o-mini
 
 encode:
   mode: nvenc
   width: 1080
   height: 1920
-  fps: 60           # or 30 if your source is 30
+  fps: 60
   rc: vbr_hq
-  cq: 19            # 18–22 sweet spot; lower = higher quality
+  cq: 19
   b_v: 8M
   maxrate: 12M
   bufsize: 24M
   preset: p5
   profile: high
-  gop: 120          # 2s keyframes at 60fps
+  gop: 120
   aq: 1
   aq_strength: 8
   bf: 3
   audio_bitrate: 192k
   audio_rate: 48000
-
+  pad_in: 0.15
+  pad_out: 0.20
 
 captions:
   font: Arial
   font_size: 38
   outline: 3
   margin_v: 110
-
-
-
-reframe:
-  enable_face_track: false
-  min_face_conf: 0.5
-
-
